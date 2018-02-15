@@ -147,7 +147,6 @@ I have to act in the method "ConfigureServices" and do the setting of
 services.AddMvc().AddMvcOptions(o => o.OutputFormatters.Add(new XmlDataContractSerializerOutputFormatter()));
 
 ### Manipulating Resources - Create a resource
-==========================================================
 
 NOTE:
 //LD STEP13 no "Id" has to be part of DTO used for creation, for this reason I create a NEW DTO without "Id"
@@ -195,16 +194,142 @@ the returned message is //LD STEP17, so I'm manually updating and using "ModelSt
 
 - //LD STEP18 It could be possible use the default MVC "validations errors"
 
-### Updating a Resource - FULL UPDATE 99999999999999999999999999
-==========================================================
-now we will do a FULL UPDATE using PUT
+### Updating a Resource - full update
 
-start by adding a DTO --> "PointOfInterestForUpdateDto"
+tsting the use of "put"
 
-//LD STEP18
-then we update the controller
+start by adding a dto --> "PointOfInterestForUpdateDto"
 
-  //LD STEP19
+- //LD STEP18 update of the controller
+
+- //LD STEP19
+    
     [HttpPut("{cityId}/pointsofinterestLd/{id}")]
     public IActionResult UpdatePointOfInterestLd(int cityId, int id, [FromBody] PointOfInterestForUpdateDto pointOfInterest)
-we will accept two parameters and the body
+
+### Updating a Resource - partial update
+
+- //LD STEP20 to do that I will use a "json patch document" that has defined a list of partial operations to do partial update
+
+- //LD STEP21
+  - so apply the received "patchDoc" to the record that is already in database.
+  - if an error happen we update the "ModelState"
+
+        patchDoc.ApplyTo(pointOfInterestToPatch, ModelState);
+
+example
+
+    [
+  {
+      "op":"replace",
+      "path":"/name",
+      "value":"luchino"
+  }
+]
+
+- //LD STEP22 it is possible to use "TryValidateModel" to check if the DTO model is still valid after that I apply the received "json patch document". Of course I do that after execute "patchDoc.ApplyTo"
+
+### Inversion of Control and Dependency Injection
+
+Definition: "Inversion of control" is a pattern. It delegates the function of selecting a concrete implementation type for a class dependencies to an external component.
+
+Definition: "Dependency Injection"(it is how we implement) is a specialization of the "Inversion of control pattern". The "dependency injection" pattern uses an object, the "container" to initialize the object and provide the required dependencies to the object.
+Is the "Container" that inject the dipendencies for our class.
+
+### Dependency Injection - injecting and using a "logger"
+
+- //LD STEP22 to add a "logger", act in "startup.cs" --> "Configure" method
+
+- //LD STEP23 then configure the controller
+
+I can log info in try-catch statements and then BUILD A STATUS CODE TO RETURN
+
+//LD STEP24
+catch (Exception ex)
+      {
+
+          _logger.LogCritical($"Exception while getting points of interest for city with id {cityId}.", ex);
+          return StatusCode(500, "A problem happened while handling your request.");
+      }
+
+### Implementing and using a "custom service"
+
+GOAL: I'm going to send an email each time an item is deleted
+
+- //LD STEP25 add the class "LocalMailService" and all the related classes and methods
+  
+- "Startup.cs" --> "Configure Services", I look to the methods that allow to "Register Custom Services" depend on the lifetime of the service.
+  - services.addTransient(created each time they are requested, used for lightweight stateless services) maybe static classes
+  - services.addScoped (created once per request)
+  - services.addSingleton (created first time they are requested)
+
+### .net core and "configuration files"
+
+- //LD STEP27 that's how to separate the informations
+
+  "mailSettings": {
+    "mailToAddress": "info@lucadangelo.it",
+    "mailFromAddress": "sviluppo.dangelo@gmail.com"
+},
+
+and how to call those
+
+  private string _mailTo = Startup.Configuration["mailSettings:mailToAddress"];
+
+### Core Entity Framework - crossplatform version of entity framework
+
+- //LD STEP28 set up the classes and the "Data Annotation" to interact with the database by ORM
+
+### seeding the database with data
+
+I will use an EXTENSION METHOD to call in "Startup.cs" class
+
+- //LD STEP29 "this CityInfoContext context" is useful to say to the compiler that "EnsureSeedDataForContext" extend "CityInfoContext"
+
+public static void EnsureSeedDataForContext(this CityInfoContext context)
+
+so in //LD STEP29 I have created an extension method, to execute it I have to add the CONTEXT to the "Configure" method of the "Startup.cs" class, then call it
+
+//LD STEP29
+cityInfoContext.EnsureSeedDataForContext();
+
+### Repository Pattern
+
+- no duplication
+- no error prone
+- better stability of the consuming class
+- persistence ignorant: switch the persist technology
+
+start by adding an interface to the repository "ICityInfoRepository", is a contract
+
+- //LD STEP30 add the real implementation "CityInfoRepository"
+
+- //LD STEP31 the "ToList()" ensure that the query is executed at that time
+
+return _context.Cities.OrderBy(c => c.Name).ToList();
+
+I give the optional possibility to include the related information about "PointOfInterest" to the cities, using "include"
+
+- //LD STEP32 - (LINQ usage)
+
+- //LD STEP33 regist the repository
+  - "addscoped": for the lifetime of a single web request, the same instance will be returned to that request.
+  If I ask for IGreetingService twice in a single request (even from different components like our Controller and View), the exact same instance will be returned. On the next request however, a brand new instance will be constructed and used instead. Individual requests have their own dependencies that are alive for the duration of that request!
+  - addtransient: each time somebody asks for an IGreetingService, they will get a brand new instance of GreetingService.
+  - addsingleton: create one and only one instance of IGreetingService, and any components wanting an IGreetingService will use the same shared instance.
+
+http://dotnetliberty.com/index.php/2015/10/15/asp-net-5-mvc6-dependency-injection-in-6-steps/
+
+### Returning data from repository - automapper
+
+Istart reading from repository, but I have to map to dto, could do that by a "for", but in this case I use "mapper"
+
+- //LD STEP34 use query string in the request to call
+
+- //LD STEP8 http://localhost:1029/api/cities/1?includePointOfInterest=true
+
+### automapper - mapping between entity and dto
+
+"AutoMaper" configuration in "Startup.cs"
+
+- //LD STEP35 to "map", "AutoMapper" use a named convention based approach, so will map the attributes that match.
