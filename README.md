@@ -1,6 +1,6 @@
 # ASP.NET-Core-Playground-Bit-More-Serious
 
-In this project I focused on create an API with REST and dot.net Core. Using of the tool postman.
+In this project I focused on create an API with REST and dot.net Core. Using postman and automapper tools.
 
 ## Main Topics
 
