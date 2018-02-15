@@ -93,7 +93,7 @@ adding "CitiesDataStore" to create some dummy data
 - this return is fixed by //LD STEP8
 
 ### Status Codes
-==========================================================
+
 After doing an "HttpRequest", the "HttpResponce" cointain a "status code"
 - LEVEL 100--> information level
 - LEVEL 200 --> success level
